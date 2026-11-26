@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Özel Anı Kasası</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Pacifico&display=swap" rel="stylesheet">
+    <!-- Firebase SDK (İzole Bulut & Kimlik Doğrulama) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .script-font {
+            font-family: "Dancing Script", "Pacifico", "Brush Script MT", "Segoe Script", cursive;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #flowerCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .glass-card {
+            background: #0d0d12;
+            border: 1px solid #262630;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
+        }
+
+        .neon-card {
+            border: 1px solid rgba(236, 72, 153, 0.45);
+            box-shadow: 0 0 35px rgba(236, 72, 153, 0.15);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 4px 20px rgba(236, 72, 153, 0.35);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.93;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.99);
+        }
+
+        .btn-danger {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            background: rgba(239, 68, 68, 0.14);
+            color: #fca5a5;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.24);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            color: #a1a1aa;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: #050507;
+            border: 1px solid #2a2a35;
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+            color-scheme: dark;
+        }
+
+        .form-input:focus {
+            border-color: #ec4899;
+        }
+
+        .auth-screen-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .auth-box {
+            width: 100%;
+            max-width: 440px;
+            padding: 32px;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .lock-badge {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 14px;
+            border-radius: 16px;
+            background: rgba(236, 72, 153, 0.14);
+            border: 1px solid rgba(236, 72, 153, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .auth-title {
+            font-size: 40px;
+            line-height: 1.15;
+            background: linear-gradient(90deg, #f472b6, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .auth-subtitle {
+            font-size: 13px;
+            color: #888894;
+        }
+
+        .shield-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 11px;
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .oauth-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .btn-oauth {
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid #2a2a35;
+            background: #08080c;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-oauth:hover {
+            border-color: #ec4899;
+            background: #12121a;
+        }
+
+        .divider-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #52525b;
+            font-size: 11px;
+            margin-bottom: 18px;
+        }
+
+        .divider-line::before, .divider-line::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #1e1e26;
+        }
+
+        .tab-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            background: #050507;
+            padding: 5px;
+            border-radius: 14px;
+            border: 1px solid #1e1e26;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #888894;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            background: #1b1b24;
+            color: #ffffff;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .alert-box {
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 16px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            font-weight: 500;
+        }
+
+        .info-box {
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 14px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #6ee7b7;
+            line-height: 1.5;
+        }
+
+        .otp-input {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 8px;
+        }
+
+        .dashboard-wrap {
+            position: relative;
+            z-index: 10;
+            padding-bottom: 60px;
+        }
+
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #1e1e26;
+            padding: 14px 20px;
+        }
+
+        .nav-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .couple-title {
+            font-size: 28px;
+            line-height: 1.1;
+            color: #f472b6;
+        }
+
+        .couple-tag {
+            font-size: 12px;
+            color: #71717a;
+            display: block;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-flower {
+            padding: 9px 14px;
+            border-radius: 10px;
+            background: rgba(236, 72, 153, 0.16);
+            border: 1px solid rgba(236, 72, 153, 0.4);
+            color: #f9a8d4;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-logout {
+            padding: 9px 14px;
+            border-radius: 10px;
+            background: #15151a;
+            border: 1px solid #27272f;
+            color: #a1a1aa;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 28px 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .hero-card {
+            padding: 32px 20px;
+            text-align: center;
+        }
+
+        .hero-badge {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #f472b6;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .hero-names {
+            font-size: 42px;
+            line-height: 1.15;
+            margin-bottom: 24px;
+        }
+
+        .counter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .counter-box {
+            background: #050507;
+            border: 1px solid #1e1e26;
+            border-radius: 16px;
+            padding: 16px 8px;
+        }
+
+        .counter-num {
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .counter-label {
+            font-size: 11px;
+            color: #71717a;
+            margin-top: 4px;
+        }
+
+        .compliments-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 700px) {
+            .compliments-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comp-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .comp-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .comp-pill-pink {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 99px;
+            background: rgba(236, 72, 153, 0.14);
+            color: #f472b6;
+            border: 1px solid rgba(236, 72, 153, 0.3);
+        }
+
+        .comp-pill-purple {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 99px;
+            background: rgba(168, 85, 247, 0.14);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .comp-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #e4e4e7;
+            font-style: italic;
+            min-height: 56px;
+        }
+
+        .comp-footer {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #1c1c24;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #71717a;
+        }
+
+        .btn-refresh {
+            background: none;
+            border: none;
+            color: #f472b6;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .music-card, .chat-card, .add-memory-card, .retention-card {
+            padding: 24px;
+        }
+
+        .music-account-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: #050507;
+            border: 1px solid #1e1e26;
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+        }
+
+        .btn-spotify {
+            padding: 9px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(29, 185, 84, 0.45);
+            background: rgba(29, 185, 84, 0.16);
+            color: #4ade80;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .music-form-row {
+            display: grid;
+            grid-template-columns: 150px 1fr 1fr 130px;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .music-form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .music-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .music-item {
+            background: #050507;
+            border: 1px solid #1e1e26;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .music-item-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .music-badge-spotify {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(29, 185, 84, 0.16);
+            color: #4ade80;
+            border: 1px solid rgba(29, 185, 84, 0.35);
+        }
+
+        .music-badge-ytm {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(239, 68, 68, 0.16);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-listen {
+            padding: 7px 12px;
+            border-radius: 10px;
+            border: 1px solid #2e2e3a;
+            background: #14141c;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .btn-listen:hover {
+            border-color: #ec4899;
+        }
+
+        .spotify-embed-frame {
+            width: 100%;
+            height: 80px;
+            border: none;
+            border-radius: 12px;
+        }
+
+        .chat-messages {
+            background: #050507;
+            border: 1px solid #1e1e26;
+            border-radius: 16px;
+            padding: 16px;
+            max-height: 290px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .chat-msg {
+            max-width: 78%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .chat-msg-p1 {
+            align-self: flex-start;
+            background: rgba(236, 72, 153, 0.14);
+            border: 1px solid rgba(236, 72, 153, 0.32);
+            color: #fce7f3;
+        }
+
+        .chat-msg-p2 {
+            align-self: flex-end;
+            background: rgba(139, 92, 246, 0.16);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            color: #ede9fe;
+        }
+
+        .chat-msg-meta {
+            font-size: 11px;
+            color: #a1a1aa;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .chat-input-row {
+            display: grid;
+            grid-template-columns: 160px 1fr 120px;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .chat-input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .memory-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .memory-note-row {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .memory-form-grid, .memory-note-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .memories-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        @media (max-width: 700px) {
+            .memories-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .memory-item {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .memory-img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #050507;
+            border-bottom: 1px solid #1e1e26;
+        }
+
+        .memory-body {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .memory-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #71717a;
+            margin-bottom: 12px;
+        }
+
+        .author-tag {
+            background: rgba(236, 72, 153, 0.14);
+            color: #f472b6;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .memory-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e4e4e7;
+        }
+
+        .memory-actions {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid #1a1a22;
+            text-align: right;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #71717a;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .btn-delete:hover {
+            color: #ef4444;
+        }
+
+        .retention-box {
+            background: #050507;
+            border: 1px solid #1e1e26;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .retention-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="flowerCanvas"></canvas>
+
+    <!-- 1. GİRİŞ, KAYIT & 6 HANELİ DOĞRULAMA EKRANI -->
+    <div id="authScreen" class="auth-screen-wrap">
+        <div class="glass-card neon-card auth-box">
+            <div class="auth-header">
+                <div class="lock-badge">🔒</div>
+                <h1 class="auth-title script-font">Özel Anı Kasası</h1>
+                <p class="auth-subtitle">Her çiftin kendi bulut odasında saklanan özel alanı</p>
+                <div id="cloudStatusBadge" class="shield-badge">🛡️ Oturum ve Bulut Kontrolü Hazırlanıyor</div>
+            </div>
+
+            <div class="oauth-grid">
+                <button type="button" class="btn-oauth" onclick="signInWithProvider('google')">
+                    <span>G</span> Google ile Bağlan
+                </button>
+                <button type="button" class="btn-oauth" onclick="signInWithProvider('apple')">
+                    <span></span> Apple ile Bağlan
+                </button>
+            </div>
+
+            <div class="divider-line">veya e-posta & şifre ile</div>
+
+            <div class="tab-bar">
+                <button type="button" id="tabLogin" class="tab-btn active" onclick="showTab('login')">Giriş Yap</button>
+                <button type="button" id="tabRegister" class="tab-btn" onclick="showTab('register')">Yeni Alan Oluştur</button>
+            </div>
+
+            <div id="authAlert" class="alert-box hidden"></div>
+            <div id="authInfo" class="info-box hidden"></div>
+
+            <!-- GİRİŞ ALANI -->
+            <div id="loginBox">
+                <div class="form-group">
+                    <label class="form-label">E-posta Adresi</label>
+                    <input type="email" id="loginEmail" class="form-input" autocomplete="email" placeholder="ornek@gmail.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Şifreniz</label>
+                    <input type="password" id="loginPassword" class="form-input" autocomplete="current-password" placeholder="••••••••">
+                </div>
+                <button type="button" class="btn-primary" onclick="doLogin()">Kendi Bulut Kasamı Aç ✨</button>
+                <div style="text-align:center; margin-top:12px;">
+                    <button type="button" class="btn-refresh" onclick="doResetPassword()">Şifremi Unuttum (E-posta Gönder)</button>
+                </div>
+            </div>
+
+            <!-- KAYIT ALANI -->
+            <div id="registerBox" class="hidden">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">1. İsim</label>
+                        <input type="text" id="regName1" class="form-input" placeholder="1. İsim">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">2. İsim</label>
+                        <input type="text" id="regName2" class="form-input" placeholder="2. İsim">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">E-posta Adresi</label>
+                    <input type="email" id="regGmail" class="form-input" placeholder="ornek@gmail.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Başlangıç Tarihi</label>
+                    <input type="date" id="regStartDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Şifre Belirle (En az 6 karakter)</label>
+                    <input type="password" id="regPassword" class="form-input" placeholder="Şifrenizi yazın">
+                </div>
+                <button type="button" class="btn-primary" onclick="startRegistrationWithOtp()">6 Haneli Doğrulama Kodu Oluştur 💖</button>
+            </div>
+
+            <!-- 6 HANELİ DOĞRULAMA & İLK KURULUM -->
+            <div id="otpBox" class="hidden">
+                <div id="otpInfoBox" class="info-box"></div>
+
+                <div id="firstSetupFields" class="hidden">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">1. İsim</label>
+                            <input type="text" id="setupName1" class="form-input" placeholder="1. İsim">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">2. İsim</label>
+                            <input type="text" id="setupName2" class="form-input" placeholder="2. İsim">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Başlangıç Tarihi</label>
+                        <input type="date" id="setupStartDate" class="form-input">
+                    </div>
+                    <button type="button" class="btn-primary" onclick="completeOAuthVaultSetup()">Özel Bulut Kasamızı Oluştur 💖</button>
+                </div>
+
+                <div id="otpVerifyFields">
+                    <div class="form-group">
+                        <label class="form-label">6 Haneli Doğrulama Kodu</label>
+                        <input type="text" id="otpCodeInput" maxlength="6" inputmode="numeric" class="form-input otp-input" placeholder="000000">
+                    </div>
+                    <button type="button" class="btn-primary" onclick="verifyOtpAndCreateVault()">Kodu Doğrula ve Kasayı Aç 🔐</button>
+                </div>
+
+                <button type="button" class="btn-logout" style="width:100%; margin-top:10px;" onclick="cancelOtp()">Geri Dön</button>
+            </div>
+
+            <p style="text-align: center; font-size: 11px; color: #52525b; margin-top: 20px;">
+                Ekrana dokunarak çiçek açtırabilirsiniz 🌸
+            </p>
+        </div>
+    </div>
+
+    <!-- 2. ÇİFTE ÖZEL BULUT PANELİ -->
+    <div id="dashboardScreen" class="dashboard-wrap hidden">
+        <header class="navbar">
+            <div class="nav-inner">
+                <div>
+                    <div id="headerCoupleNames" class="couple-title script-font"></div>
+                    <span id="headerUsernameTag" class="couple-tag"></span>
+                </div>
+                <div class="nav-actions">
+                    <button type="button" class="btn-flower" onclick="doSendFlowerToBoth()">🌼 Çiçek Gönder</button>
+                    <button type="button" class="btn-logout" onclick="doLogout()">Çıkış</button>
+                    <button type="button" class="btn-danger" onclick="doDeleteMyAccount()">Hesabımı Sil</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="glass-card neon-card hero-card">
+                <div class="hero-badge">BİRLİKTE GEÇEN HER ANIMIZ</div>
+                <h2 id="heroTitle" class="hero-names script-font"></h2>
+                <div class="counter-grid">
+                    <div class="counter-box">
+                        <div id="countDays" class="counter-num" style="color: #f472b6;">0</div>
+                        <div class="counter-label">Gün</div>
+                    </div>
+                    <div class="counter-box">
+                        <div id="countHours" class="counter-num" style="color: #c084fc;">0</div>
+                        <div class="counter-label">Saat</div>
+                    </div>
+                    <div class="counter-box">
+                        <div id="countMinutes" class="counter-num" style="color: #fb7185;">0</div>
+                        <div class="counter-label">Dakika</div>
+                    </div>
+                    <div class="counter-box">
+                        <div id="countSeconds" class="counter-num" style="color: #fcd34d;">0</div>
+                        <div class="counter-label">Saniye</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="compliments-grid">
+                <div class="glass-card comp-card">
+                    <div>
+                        <div class="comp-top">
+                            <span id="card1Badge" class="comp-pill-pink"></span>
+                            <span>🌸</span>
+                        </div>
+                        <p id="complimentText1" class="comp-text"></p>
+                    </div>
+                    <div class="comp-footer">
+                        <span id="complimentFrom1"></span>
+                        <button type="button" class="btn-refresh" onclick="updateCompliment(1)">Yeni İltifat ↻</button>
+                    </div>
+                </div>
+
+                <div class="glass-card comp-card">
+                    <div>
+                        <div class="comp-top">
+                            <span id="card2Badge" class="comp-pill-purple"></span>
+                            <span>🌼</span>
+                        </div>
+                        <p id="complimentText2" class="comp-text"></p>
+                    </div>
+                    <div class="comp-footer">
+                        <span id="complimentFrom2"></span>
+                        <button type="button" class="btn-refresh" style="color: #c084fc;" onclick="updateCompliment(2)">Yeni İltifat ↻</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SPOTIFY & YOUTUBE MUSIC -->
+            <section class="glass-card music-card">
+                <div class="section-title">
+                    <span>🎵 Spotify & YouTube Music Ortak Liste</span>
+                    <span id="spotifyStatusText" style="font-size: 12px; color: #71717a; font-weight: 400;">Spotify bağlı değil</span>
+                </div>
+
+                <div class="music-account-bar">
+                    <div id="spotifyProfileInfo" style="font-size: 13px; color: #a1a1aa;">
+                        Şarkı linki ekleyip sayfa içinde Spotify oynatabilir veya YouTube Music bağlantısı paylaşabilirsiniz.
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="btn-spotify" onclick="connectSpotifyAccount()">🎧 Spotify ile Bağlan</button>
+                        <button type="button" id="btnLoadSpotifyPlaylists" class="btn-listen hidden" onclick="importSpotifyPlaylists()">Listelerimi Ekle</button>
+                    </div>
+                </div>
+
+                <div class="music-form-row">
+                    <select id="musicPlatform" class="form-input">
+                        <option value="spotify">Spotify</option>
+                        <option value="ytmusic">YouTube Music</option>
+                    </select>
+                    <input type="text" id="musicTitle" class="form-input" placeholder="Şarkı veya sanatçı adı">
+                    <input type="url" id="musicUrl" class="form-input" placeholder="https://open.spotify.com/... veya YouTube Music linki">
+                    <button type="button" class="btn-primary" style="padding: 12px;" onclick="doAddTrack()">Ekle 🎶</button>
+                </div>
+                <div id="musicList" class="music-list"></div>
+            </section>
+
+            <!-- İKİNİZİN SOHBETİ -->
+            <section class="glass-card chat-card">
+                <div class="section-title">
+                    <span>💬 İkinizin Özel Sohbeti</span>
+                    <span style="font-size: 12px; color: #71717a; font-weight: 400;">Sadece bu bulut kasasında</span>
+                </div>
+                <div id="chatMessages" class="chat-messages"></div>
+                <div class="chat-input-row">
+                    <select id="chatSender" class="form-input"></select>
+                    <input type="text" id="chatInput" class="form-input" placeholder="İçinden geçen bir mesaj yaz..." onkeydown="if(event.key==='Enter') doSendChat()">
+                    <button type="button" class="btn-primary" style="padding: 12px;" onclick="doSendChat()">Gönder 💌</button>
+                </div>
+            </section>
+
+            <!-- YENİ ANI EKLE -->
+            <section class="glass-card add-memory-card">
+                <div class="section-title">
+                    <span>📸 Yeni Anı Ekle</span>
+                    <span style="font-size: 12px; color: #71717a; font-weight: 400;">Fotoğraflar otomatik küçültülür</span>
+                </div>
+                <div>
+                    <div class="memory-form-grid">
+                        <div>
+                            <label class="form-label">Kim Ekliyor?</label>
+                            <select id="memoryAuthor" class="form-input"></select>
+                        </div>
+                        <div>
+                            <label class="form-label">Anı Tarihi</label>
+                            <input type="date" id="memoryDate" class="form-input">
+                        </div>
+                        <div>
+                            <label class="form-label">Fotoğraf Seç (İsteğe Bağlı)</label>
+                            <input type="file" id="memoryPhoto" accept="image/*" class="form-input" style="padding: 9px;">
+                        </div>
+                    </div>
+                    <div class="memory-note-row">
+                        <input type="text" id="memoryNote" class="form-input" placeholder="O gün neler hissettiniz?">
+                        <button type="button" class="btn-primary" style="padding: 12px;" onclick="doAddMemory()">Anıyı Kaydet ✨</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ANI DEFTERİ -->
+            <section>
+                <div class="section-title">
+                    <span>Özel Anı Defterimiz</span>
+                    <span id="memoryCountBadge" style="font-size: 12px; background: #141418; border: 1px solid #27272a; padding: 4px 12px; border-radius: 99px; color: #a1a1aa;">0 Anı</span>
+                </div>
+                <div id="memoriesGrid" class="memories-grid"></div>
+            </section>
+
+            <!-- BULUT SAKLAMA / ARA VERME / 30 GÜN SONRA SİLME -->
+            <section class="glass-card retention-card">
+                <div class="section-title">
+                    <span>⏳ Bulut Saklama, Ara Verme ve 30 Gün Silme Ayarı</span>
+                    <span id="retentionStatusBadge" style="font-size: 12px; color: #6ee7b7; font-weight: 600;">Aktif (Veriler Korunuyor)</span>
+                </div>
+                <div class="retention-box">
+                    <p id="retentionDescription" style="font-size: 13px; color: #a1a1aa; line-height: 1.55;">
+                        Ara verdiğinizde verileriniz korunur; geri döndüğünüzde aynı mesajlar, anılar ve şarkılarla devam edersiniz. İsterseniz 30 gün sonra bulut kasasının otomatik silinmesini açabilirsiniz.
+                    </p>
+                    <div class="retention-actions">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn-listen" onclick="setKeepVaultMode()">Ara Verme / Verileri Koru</button>
+                            <button type="button" class="btn-danger" onclick="scheduleAutoDeleteIn30Days()">30 Gün Sonra Bulutu Sil</button>
+                        </div>
+                        <button type="button" class="btn-danger" onclick="doDeleteMyAccount()">Hesabımı Hemen Sil</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // =========================================================================
+        // 1. FIREBASE PROJE AYARLARI
+        // =========================================================================
+        var FIREBASE_CONFIG = {
+            apiKey: "",
+            authDomain: "",
+            databaseURL: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
+
+        // =========================================================================
+        // 2. SPOTIFY DEVELOPER CLIENT ID (İSTEĞE BAĞLI)
+        // =========================================================================
+        var SPOTIFY_CLIENT_ID = "";
+
+        var isCloudReady = Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.databaseURL);
+        var fbAuth = null;
+        var fbDb = null;
+        var vaultRootRef = null;
+
+        if (isCloudReady && window.firebase) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            fbAuth = firebase.auth();
+            fbDb = firebase.database();
+            document.getElementById('cloudStatusBadge').textContent = '🛡️ Firebase Auth & vaults/$uid Kurallı Mod';
+        } else {
+            document.getElementById('cloudStatusBadge').textContent = '🛡️ Yerel Tarayıcı Modu (6 Haneli Kod Aktif)';
+        }
+
+        var LOCAL_VAULTS_KEY = 'ozel_ani_kasasi_vaults_v3';
+        var LOCKOUT_KEY = 'ozel_ani_kasasi_lockout_v3';
+        var SPOTIFY_VERIFIER_KEY = 'spotify_pkce_verifier_v3';
+
+        var THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+        var currentUid = null;
+        var currentUser = null;
+        var spotifyAccessToken = null;
+        var timerInterval = null;
+        var localPollInterval = null;
+        var lastSeenFlowerTs = 0;
+        var compIndex1 = 0;
+        var compIndex2 = 0;
+
+        var pendingRegData = null;
+        var pendingOAuthUser = null;
+        var generatedOtpCode = '';
+        var otpExpiresAt = 0;
+
+        var lastRenderedChatCount = -1;
+        var lastRenderedTrackSig = '';
+        var lastRenderedMemorySig = '';
+
+        function getLocalTodayStr() {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = String(now.getMonth() + 1).padStart(2, '0');
+            var d = String(now.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+
+        var todayStr = getLocalTodayStr();
+        if (document.getElementById('regStartDate')) document.getElementById('regStartDate').value = todayStr;
+        if (document.getElementById('setupStartDate')) document.getElementById('setupStartDate').value = todayStr;
+
+        function sanitizeText(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function sanitizeSafeHref(url) {
+            var clean = String(url || '').trim();
+            if (!clean) return 'https://open.spotify.com';
+            if (!/^https?:\/\//i.test(clean)) {
+                clean = 'https://' + clean;
+            }
+            try {
+                var parsed = new URL(clean);
+                if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+                    return parsed.href;
+                }
+            } catch (e) {}
+            return 'https://open.spotify.com';
+        }
+
+        async function hashPasswordSha256(secret) {
+            var clean = String(secret || '');
+            if (window.crypto && window.crypto.subtle) {
+                var enc = new TextEncoder().encode('vault_v3_salt_' + clean);
+                var buf = await window.crypto.subtle.digest('SHA-256', enc);
+                return Array.from(new Uint8Array(buf)).map(function(b) {
+                    return b.toString(16).padStart(2, '0');
+                }).join('');
+            }
+            var h = 2166136261;
+            for (var i = 0; i < clean.length; i++) {
+                h ^= clean.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return 'fnv1a_' + (h >>> 0).toString(16);
+        }
+
+        function generateSixDigitCode() {
+            var arr = new Uint32Array(1);
+            if (window.crypto && window.crypto.getRandomValues) {
+                window.crypto.getRandomValues(arr);
+                return String(100000 + (arr[0] % 900000));
+            }
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        function checkRateLimit() {
+            try {
+                var raw = localStorage.getItem(LOCKOUT_KEY);
+                if (!raw) return null;
+                var info = JSON.parse(raw);
+                if (info.lockedUntil && Date.now() < info.lockedUntil) {
+                    var sec = Math.ceil((info.lockedUntil - Date.now()) / 1000);
+                    return 'Çok fazla hatalı deneme! Lütfen ' + sec + ' saniye bekleyin.';
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        function recordFailedAttempt() {
+            try {
+                var raw = localStorage.getItem(LOCKOUT_KEY);
+                var info = raw ? JSON.parse(raw) : { count: 0, lockedUntil: 0 };
+                info.count = (info.count || 0) + 1;
+                if (info.count >= 5) {
+                    info.lockedUntil = Date.now() + 60000;
+                    info.count = 0;
+                }
+                localStorage.setItem(LOCKOUT_KEY, JSON.stringify(info));
+            } catch (e) {}
+        }
+
+        function resetFailedAttempts() {
+            try { localStorage.removeItem(LOCKOUT_KEY); } catch (e) {}
+        }
+
+        function readLocalVaults() {
+            try {
+                return JSON.parse(localStorage.getItem(LOCAL_VAULTS_KEY) || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function writeLocalVaults(obj) {
+            try {
+                localStorage.setItem(LOCAL_VAULTS_KEY, JSON.stringify(obj));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function readOwnVault(uid) {
+            if (!uid) return null;
+            if (isCloudReady && fbDb) {
+                var snap = await fbDb.ref('vaults/' + uid).once('value');
+                return snap.val();
+            }
+            var all = readLocalVaults();
+            return all[uid] || null;
+        }
+
+        async function writeFullVault(uid, vaultData) {
+            if (!uid) return false;
+            if (isCloudReady && fbDb) {
+                await fbDb.ref('vaults/' + uid).set(vaultData);
+                return true;
+            }
+            var all = readLocalVaults();
+            all[uid] = vaultData;
+            return writeLocalVaults(all);
+        }
+
+        async function updateVaultPath(uid, subPath, value) {
+            if (!uid) return false;
+            if (isCloudReady && fbDb) {
+                await fbDb.ref('vaults/' + uid + '/' + subPath).set(value);
+                return true;
+            }
+            var all = readLocalVaults();
+            if (!all[uid]) return false;
+            var parts = subPath.split('/');
+            var target = all[uid];
+            for (var i = 0; i < parts.length - 1; i++) {
+                if (!target[parts[i]] || typeof target[parts[i]] !== 'object') {
+                    target[parts[i]] = {};
+                }
+                target = target[parts[i]];
+            }
+            target[parts[parts.length - 1]] = value;
+            return writeLocalVaults(all);
+        }
+
+        async function deleteVaultData(uid) {
+            if (!uid) return;
+            if (isCloudReady && fbDb) {
+                await fbDb.ref('vaults/' + uid).remove();
+                return;
+            }
+            var all = readLocalVaults();
+            delete all[uid];
+            writeLocalVaults(all);
+        }
+
+        function showAlert(msg) {
+            var box = document.getElementById('authAlert');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+            document.getElementById('authInfo').classList.add('hidden');
+        }
+
+        function showAuthInfo(msg) {
+            var box = document.getElementById('authInfo');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+            document.getElementById('authAlert').classList.add('hidden');
+        }
+
+        function hideAuthMessages() {
+            document.getElementById('authAlert').classList.add('hidden');
+            document.getElementById('authInfo').classList.add('hidden');
+        }
+
+        function showTab(tab) {
+            hideAuthMessages();
+            document.getElementById('otpBox').classList.add('hidden');
+            var loginBox = document.getElementById('loginBox');
+            var registerBox = document.getElementById('registerBox');
+            var tabLogin = document.getElementById('tabLogin');
+            var tabRegister = document.getElementById('tabRegister');
+
+            if (tab === 'login') {
+                loginBox.classList.remove('hidden');
+                registerBox.classList.add('hidden');
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+            } else {
+                loginBox.classList.add('hidden');
+                registerBox.classList.remove('hidden');
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+            }
+        }
+
+        function cancelOtp() {
+            pendingRegData = null;
+            pendingOAuthUser = null;
+            generatedOtpCode = '';
+            showTab('login');
+        }
+
+        function normalizeVault(vault) {
+            if (!vault || typeof vault !== 'object') return null;
+            if (!Array.isArray(vault.messages)) vault.messages = [];
+            if (!Array.isArray(vault.memories)) vault.memories = [];
+            if (!Array.isArray(vault.tracks)) vault.tracks = [];
+            if (!vault.flowerSignal) vault.flowerSignal = { ts: 0, from: '' };
+            if (!vault.retention) {
+                vault.retention = {
+                    autoDeleteEnabled: false,
+                    deleteAfterMs: null
+                };
+            }
+            return vault;
+        }
+
+        async function enforceThirtyDayPolicyIfExpired(uid, vault) {
+            if (!vault || !vault.retention || !vault.retention.autoDeleteEnabled || !vault.retention.deleteAfterMs) {
+                return vault;
+            }
+            if (Date.now() >= Number(vault.retention.deleteAfterMs)) {
+                await deleteVaultData(uid);
+                var fresh = {
+                    ownerUid: uid,
+                    email: vault.email || '',
+                    name1: vault.name1 || '1. Kişi',
+                    name2: vault.name2 || '2. Kişi',
+                    startDate: vault.startDate || getLocalTodayStr(),
+                    spotifyConnected: null,
+                    flowerSignal: { ts: 0, from: '' },
+                    tracks: [],
+                    messages: [],
+                    memories: [],
+                    retention: { autoDeleteEnabled: false, deleteAfterMs: null }
+                };
+                await writeFullVault(uid, fresh);
+                alert('30 günlük bulut silme süresi dolduğu için önceki bulut verileriniz silindi ve temiz bir alan açıldı.');
+                return fresh;
+            }
+            return vault;
+        }
+
+        // 6 HANELİ DOĞRULAMA KODU İLE KAYIT
+        async function startRegistrationWithOtp() {
+            hideAuthMessages();
+            var name1 = document.getElementById('regName1').value.trim();
+            var name2 = document.getElementById('regName2').value.trim();
+            var gmail = document.getElementById('regGmail').value.trim().toLowerCase();
+            var startDate = document.getElementById('regStartDate').value || getLocalTodayStr();
+            var password = document.getElementById('regPassword').value;
+
+            if (!name1 || !name2) {
+                showAlert('Lütfen her iki ismi de yazın.');
+                return;
+            }
+            if (!gmail || gmail.indexOf('@') === -1) {
+                showAlert('Lütfen geçerli bir e-posta adresi girin.');
+                return;
+            }
+            if (!password || password.length < 6) {
+                showAlert('Şifreniz en az 6 karakter olmalıdır.');
+                return;
+            }
+
+            generatedOtpCode = generateSixDigitCode();
+            otpExpiresAt = Date.now() + 300000;
+            pendingRegData = {
+                name1: name1,
+                name2: name2,
+                gmail: gmail,
+                startDate: startDate,
+                password: password
+            };
+
+            document.getElementById('registerBox').classList.add('hidden');
+            document.getElementById('firstSetupFields').classList.add('hidden');
+            document.getElementById('otpVerifyFields').classList.remove('hidden');
+            document.getElementById('otpBox').classList.remove('hidden');
+            document.getElementById('otpCodeInput').value = '';
+            document.getElementById('otpInfoBox').innerHTML =
+                '<strong>' + sanitizeText(gmail) + '</strong> için doğrulama kodu oluşturuldu.<br>' +
+                'Doğrulama Kodunuz: <strong style="font-size:18px; color:#ffffff; letter-spacing:3px;">' + generatedOtpCode + '</strong>';
+        }
+
+        async function verifyOtpAndCreateVault() {
+            hideAuthMessages();
+            var entered = document.getElementById('otpCodeInput').value.trim();
+            if (!pendingRegData || !generatedOtpCode) {
+                showAlert('Önce kayıt formunu doldurup kod oluşturun.');
+                return;
+            }
+            if (Date.now() > otpExpiresAt) {
+                showAlert('Kodun süresi doldu, geri dönüp yeniden oluşturun.');
+                return;
+            }
+            if (entered !== generatedOtpCode) {
+                showAlert('6 haneli doğrulama kodu hatalı!');
+                return;
+            }
+
+            try {
+                if (isCloudReady && fbAuth) {
+                    var cred = await fbAuth.createUserWithEmailAndPassword(pendingRegData.gmail, pendingRegData.password);
+                    var uid = cred.user.uid;
+                    var vaultObj = normalizeVault({
+                        ownerUid: uid,
+                        email: pendingRegData.gmail,
+                        name1: pendingRegData.name1,
+                        name2: pendingRegData.name2,
+                        startDate: pendingRegData.startDate,
+                        spotifyConnected: null,
+                        flowerSignal: { ts: 0, from: '' },
+                        tracks: [],
+                        messages: [],
+                        memories: [],
+                        retention: { autoDeleteEnabled: false, deleteAfterMs: null }
+                    });
+                    await writeFullVault(uid, vaultObj);
+                    try { await cred.user.sendEmailVerification(); } catch (e) {}
+                    pendingRegData = null;
+                    generatedOtpCode = '';
+                    resetFailedAttempts();
+                    document.getElementById('otpBox').classList.add('hidden');
+                    openDashboard(uid, vaultObj);
+                } else {
+                    var localUid = 'local_' + await hashPasswordSha256(pendingRegData.gmail);
+                    var existing = await readOwnVault(localUid);
+                    if (existing) {
+                        showAlert('Bu e-posta adresiyle zaten bir kasa oluşturulmuş.');
+                        return;
+                    }
+                    var pwHash = await hashPasswordSha256(pendingRegData.password);
+                    var localVault = normalizeVault({
+                        ownerUid: localUid,
+                        email: pendingRegData.gmail,
+                        passwordHash: pwHash,
+                        name1: pendingRegData.name1,
+                        name2: pendingRegData.name2,
+                        startDate: pendingRegData.startDate,
+                        spotifyConnected: null,
+                        flowerSignal: { ts: 0, from: '' },
+                        tracks: [],
+                        messages: [],
+                        memories: [],
+                        retention: { autoDeleteEnabled: false, deleteAfterMs: null }
+                    });
+                    var ok = await writeFullVault(localUid, localVault);
+                    if (!ok) {
+                        showAlert('Tarayıcı depolama alanı dolu olduğu için kayıt yapılamadı.');
+                        return;
+                    }
+                    pendingRegData = null;
+                    generatedOtpCode = '';
+                    resetFailedAttempts();
+                    document.getElementById('otpBox').classList.add('hidden');
+                    openDashboard(localUid, localVault);
+                }
+            } catch (err) {
+                showAlert('Kayıt başarısız: ' + (err.message || 'Bu e-posta zaten kayıtlı olabilir.'));
+            }
+        }
+
+        // GİRİŞ
+        async function doLogin() {
+            hideAuthMessages();
+            var lockMsg = checkRateLimit();
+            if (lockMsg) {
+                showAlert(lockMsg);
+                return;
+            }
+
+            var email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            var password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showAlert('Lütfen e-posta adresinizi ve şifrenizi girin.');
+                return;
+            }
+
+            try {
+                if (isCloudReady && fbAuth) {
+                    await fbAuth.signInWithEmailAndPassword(email, password);
+                    resetFailedAttempts();
+                } else {
+                    var localUid = 'local_' + await hashPasswordSha256(email);
+                    var vault = await readOwnVault(localUid);
+                    var pwHash = await hashPasswordSha256(password);
+                    if (!vault || vault.passwordHash !== pwHash) {
+                        recordFailedAttempt();
+                        showAlert('E-posta veya şifre hatalı!');
+                        return;
+                    }
+                    resetFailedAttempts();
+                    var checkedVault = await enforceThirtyDayPolicyIfExpired(localUid, normalizeVault(vault));
+                    openDashboard(localUid, checkedVault);
+                }
+            } catch (err) {
+                recordFailedAttempt();
+                showAlert('Giriş başarısız: ' + (err.message || 'E-posta veya şifre hatalı!'));
+            }
+        }
+
+        async function doResetPassword() {
+            hideAuthMessages();
+            var email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            if (!email || email.indexOf('@') === -1) {
+                showAlert('Şifre sıfırlama bağlantısı göndermek için önce e-posta alanını doldurun.');
+                return;
+            }
+            if (!isCloudReady || !fbAuth) {
+                showAlert('Şifre sıfırlama e-postası göndermek için Firebase yapılandırmasını aktif edin.');
+                return;
+            }
+            try {
+                await fbAuth.sendPasswordResetEmail(email);
+                showAuthInfo('Şifre sıfırlama bağlantısı ' + email + ' adresine gönderildi.');
+            } catch (err) {
+                showAlert('Sıfırlama e-postası gönderilemedi: ' + (err.message || 'Tekrar deneyin.'));
+            }
+        }
+
+        // GOOGLE / APPLE GİRİŞ
+        async function signInWithProvider(providerType) {
+            hideAuthMessages();
+            if (!isCloudReady || !fbAuth) {
+                showAlert('Google ve Apple girişi için FIREBASE_CONFIG bilgilerini doldurun ve HTTPS/localhost üzerinden açın.');
+                return;
+            }
+            try {
+                var provider = (providerType === 'google')
+                    ? new firebase.auth.GoogleAuthProvider()
+                    : new firebase.auth.OAuthProvider('apple.com');
+
+                var result = await fbAuth.signInWithPopup(provider);
+                var user = result.user;
+                var existingVault = await readOwnVault(user.uid);
+
+                if (existingVault) {
+                    var checked = await enforceThirtyDayPolicyIfExpired(user.uid, normalizeVault(existingVault));
+                    openDashboard(user.uid, checked);
+                } else {
+                    pendingOAuthUser = user;
+                    document.getElementById('loginBox').classList.add('hidden');
+                    document.getElementById('registerBox').classList.add('hidden');
+                    document.getElementById('otpVerifyFields').classList.add('hidden');
+                    document.getElementById('firstSetupFields').classList.remove('hidden');
+                    document.getElementById('otpBox').classList.remove('hidden');
+                    document.getElementById('otpInfoBox').innerHTML =
+                        '<strong>' + sanitizeText(user.email || providerType) + '</strong> bağlandı.<br>Kasanız için isimleri ve başlangıç tarihini girin:';
+                }
+            } catch (err) {
+                showAlert('Bağlantı tamamlanamadı: ' + (err.message || 'Tekrar deneyin.'));
+            }
+        }
+
+        async function completeOAuthVaultSetup() {
+            hideAuthMessages();
+            if (!pendingOAuthUser) return;
+            var name1 = document.getElementById('setupName1').value.trim();
+            var name2 = document.getElementById('setupName2').value.trim();
+            var startDate = document.getElementById('setupStartDate').value || getLocalTodayStr();
+
+            if (!name1 || !name2) {
+                showAlert('Lütfen her iki ismi de yazın.');
+                return;
+            }
+
+            var newVault = normalizeVault({
+                ownerUid: pendingOAuthUser.uid,
+                email: pendingOAuthUser.email || '',
+                name1: name1,
+                name2: name2,
+                startDate: startDate,
+                spotifyConnected: null,
+                flowerSignal: { ts: 0, from: '' },
+                tracks: [],
+                messages: [],
+                memories: [],
+                retention: { autoDeleteEnabled: false, deleteAfterMs: null }
+            });
+
+            var uid = pendingOAuthUser.uid;
+            pendingOAuthUser = null;
+            await writeFullVault(uid, newVault);
+            document.getElementById('otpBox').classList.add('hidden');
+            openDashboard(uid, newVault);
+        }
+
+        // OTURUM TAKİBİ (SAYFA YENİLENİNCE KORUNUR)
+        if (isCloudReady && fbAuth) {
+            fbAuth.onAuthStateChanged(async function(user) {
+                if (user) {
+                    var vault = await readOwnVault(user.uid);
+                    if (vault) {
+                        var checked = await enforceThirtyDayPolicyIfExpired(user.uid, normalizeVault(vault));
+                        openDashboard(user.uid, checked);
+                    } else {
+                        pendingOAuthUser = user;
+                        document.getElementById('authScreen').classList.remove('hidden');
+                        document.getElementById('dashboardScreen').classList.add('hidden');
+                        document.getElementById('loginBox').classList.add('hidden');
+                        document.getElementById('registerBox').classList.add('hidden');
+                        document.getElementById('otpVerifyFields').classList.add('hidden');
+                        document.getElementById('firstSetupFields').classList.remove('hidden');
+                        document.getElementById('otpBox').classList.remove('hidden');
+                        document.getElementById('otpInfoBox').innerHTML =
+                            '<strong>' + sanitizeText(user.email || user.uid) + '</strong> oturumu açık.<br>Kasanızı tamamlamak için isimleri girin:';
+                    }
+                } else {
+                    teardownDashboardUI();
+                }
+            });
+        }
+
+        function teardownDashboardUI() {
+            if (vaultRootRef) {
+                vaultRootRef.off();
+                vaultRootRef = null;
+            }
+            if (localPollInterval) {
+                clearInterval(localPollInterval);
+                localPollInterval = null;
+            }
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            currentUid = null;
+            currentUser = null;
+            spotifyAccessToken = null;
+            lastRenderedChatCount = -1;
+            lastRenderedTrackSig = '';
+            lastRenderedMemorySig = '';
+            document.getElementById('dashboardScreen').classList.add('hidden');
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('loginPassword').value = '';
+        }
+
+        async function doLogout() {
+            if (isCloudReady && fbAuth) {
+                try {
+                    await fbAuth.signOut();
+                    return;
+                } catch (e) {}
+            }
+            teardownDashboardUI();
+        }
+
+        // HESABIMI SİL
+        async function doDeleteMyAccount() {
+            if (!currentUser || !currentUid) return;
+            var firstConfirm = confirm('Hesabınızı ve tüm mesaj, anı, fotoğraf ve şarkı verilerinizi kalıcı olarak silmek istediğinize emin misiniz?');
+            if (!firstConfirm) return;
+            var secondConfirm = confirm('Bu işlem geri alınamaz. Hesabınız ve bulut kasasındaki tüm veriler silinsin mi?');
+            if (!secondConfirm) return;
+
+            try {
+                await deleteVaultData(currentUid);
+                if (isCloudReady && fbAuth && fbAuth.currentUser) {
+                    try {
+                        await fbAuth.currentUser.delete();
+                    } catch (authErr) {
+                        await fbAuth.signOut();
+                        alert('Bulut kasası silindi. Kimlik hesabını da tamamen kaldırmak için yeniden giriş yapıp tekrar deneyin.');
+                    }
+                }
+                teardownDashboardUI();
+                showAuthInfo('Hesabınız ve kayıtlı verileriniz silindi.');
+            } catch (err) {
+                alert('Silme işlemi sırasında hata oluştu: ' + (err.message || 'Tekrar deneyin.'));
+            }
+        }
+
+        // 30 GÜN SONRA BULUTU SİL / ARA VERME
+        async function setKeepVaultMode() {
+            if (!currentUser || !currentUid) return;
+            currentUser.retention = {
+                autoDeleteEnabled: false,
+                deleteAfterMs: null
+            };
+            var ok = await updateVaultPath(currentUid, 'retention', currentUser.retention);
+            if (!ok) {
+                alert('Ayar kaydedilemedi.');
+                return;
+            }
+            renderRetentionUI();
+            alert('Ara verme modu aktif: Verileriniz silinmez, geri döndüğünüzde aynı verilerle devam edebilirsiniz.');
+        }
+
+        async function scheduleAutoDeleteIn30Days() {
+            if (!currentUser || !currentUid) return;
+            var okConfirm = confirm('Bulut kasasındaki verilerin 30 gün sonra otomatik silinmesini açmak istiyor musunuz? İstediğiniz zaman vazgeçip iptal edebilirsiniz.');
+            if (!okConfirm) return;
+
+            var targetMs = Date.now() + THIRTY_DAYS_MS;
+            currentUser.retention = {
+                autoDeleteEnabled: true,
+                deleteAfterMs: targetMs
+            };
+            var ok = await updateVaultPath(currentUid, 'retention', currentUser.retention);
+            if (!ok) {
+                alert('30 günlük silme planı kaydedilemedi.');
+                return;
+            }
+            renderRetentionUI();
+            alert('30 gün sonra otomatik bulut silme planlandı.');
+        }
+
+        function renderRetentionUI() {
+            var badge = document.getElementById('retentionStatusBadge');
+            var desc = document.getElementById('retentionDescription');
+            if (!currentUser || !currentUser.retention) return;
+
+            if (currentUser.retention.autoDeleteEnabled && currentUser.retention.deleteAfterMs) {
+                var targetDate = new Date(Number(currentUser.retention.deleteAfterMs));
+                var remainingDays = Math.max(0, Math.ceil((Number(currentUser.retention.deleteAfterMs) - Date.now()) / (24 * 60 * 60 * 1000)));
+                badge.textContent = '30 Gün Silme Aktif (' + remainingDays + ' gün kaldı)';
+                badge.style.color = '#fca5a5';
+                desc.textContent =
+                    'Bulut verileriniz ' + targetDate.toLocaleDateString('tr-TR') + ' tarihinde otomatik silinecek şekilde ayarlandı. ' +
+                    'Ara verip geri dönerseniz veya vazgeçerseniz "Ara Verme / Verileri Koru" ile iptal edebilirsiniz.';
+            } else {
+                badge.textContent = 'Aktif (Ara Verilse Bile Veriler Korunuyor)';
+                badge.style.color = '#6ee7b7';
+                desc.textContent =
+                    'Ara verdiğinizde verileriniz korunur; geri döndüğünüzde aynı mesajlar, anılar ve şarkılarla devam edersiniz. ' +
+                    'İsterseniz "30 Gün Sonra Bulutu Sil" seçeneğini aktif edebilirsiniz.';
+            }
+        }
+
+        function openDashboard(uid, vault) {
+            currentUid = uid;
+            currentUser = normalizeVault(vault);
+            lastSeenFlowerTs = (currentUser.flowerSignal && currentUser.flowerSignal.ts) ? currentUser.flowerSignal.ts : 0;
+
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.remove('hidden');
+
+            document.getElementById('headerCoupleNames').textContent = currentUser.name1 + ' & ' + currentUser.name2;
+            document.getElementById('headerUsernameTag').textContent = '🔒 Kasa • ' + (currentUser.email || uid);
+            document.getElementById('heroTitle').textContent = currentUser.name1 + ' & ' + currentUser.name2 + ' Hikayesi';
+
+            document.getElementById('card1Badge').textContent = currentUser.name2 + ' İçin Özel İltifat';
+            document.getElementById('complimentFrom1').textContent = 'Sevgilerle, ' + currentUser.name1;
+            document.getElementById('card2Badge').textContent = currentUser.name1 + ' İçin Özel İltifat';
+            document.getElementById('complimentFrom2').textContent = 'Sevgilerle, ' + currentUser.name2;
+
+            var optionsHtml = '<option value="' + sanitizeText(currentUser.name1) + '">' + sanitizeText(currentUser.name1) + '</option>' +
+                              '<option value="' + sanitizeText(currentUser.name2) + '">' + sanitizeText(currentUser.name2) + '</option>';
+            document.getElementById('memoryAuthor').innerHTML = optionsHtml;
+            document.getElementById('chatSender').innerHTML = optionsHtml;
+            document.getElementById('memoryDate').value = getLocalTodayStr();
+
+            updateCompliment(1);
+            updateCompliment(2);
+            updateSpotifyUI();
+            renderRetentionUI();
+            startCounter(currentUser.startDate);
+
+            lastRenderedChatCount = -1;
+            lastRenderedTrackSig = '';
+            lastRenderedMemorySig = '';
+            renderTracks(currentUser.tracks);
+            renderChat(currentUser.messages);
+            renderMemories(currentUser.memories);
+
+            attachTargetedSync();
+            handleSpotifyCallbackIfPresent();
+        }
+
+        function attachTargetedSync() {
+            if (vaultRootRef) {
+                vaultRootRef.off();
+                vaultRootRef = null;
+            }
+            if (localPollInterval) {
+                clearInterval(localPollInterval);
+                localPollInterval = null;
+            }
+
+            if (isCloudReady && fbDb && currentUid) {
+                vaultRootRef = fbDb.ref('vaults/' + currentUid);
+                vaultRootRef.child('messages').on('value', function(snap) {
+                    if (!currentUser) return;
+                    var arr = Array.isArray(snap.val()) ? snap.val() : (snap.val() ? Object.values(snap.val()) : []);
+                    currentUser.messages = arr;
+                    renderChat(arr);
+                });
+                vaultRootRef.child('memories').on('value', function(snap) {
+                    if (!currentUser) return;
+                    var arr = Array.isArray(snap.val()) ? snap.val() : (snap.val() ? Object.values(snap.val()) : []);
+                    currentUser.memories = arr;
+                    renderMemories(arr);
+                });
+                vaultRootRef.child('tracks').on('value', function(snap) {
+                    if (!currentUser) return;
+                    var arr = Array.isArray(snap.val()) ? snap.val() : (snap.val() ? Object.values(snap.val()) : []);
+                    currentUser.tracks = arr;
+                    renderTracks(arr);
+                });
+                vaultRootRef.child('flowerSignal').on('value', function(snap) {
+                    var sig = snap.val();
+                    var ts = sig && sig.ts ? Number(sig.ts) : 0;
+                    if (ts > lastSeenFlowerTs) {
+                        lastSeenFlowerTs = ts;
+                        burstFlowersCenter();
+                        burstFlowersPartnerSide();
+                    }
+                });
+                vaultRootRef.child('retention').on('value', function(snap) {
+                    if (!currentUser) return;
+                    if (snap.val()) currentUser.retention = snap.val();
+                    renderRetentionUI();
+                });
+            } else {
+                localPollInterval = setInterval(async function() {
+                    if (!currentUid || !currentUser) return;
+                    var latest = await readOwnVault(currentUid);
+                    if (!latest) return;
+                    latest = normalizeVault(latest);
+                    var sigTs = latest.flowerSignal && latest.flowerSignal.ts ? Number(latest.flowerSignal.ts) : 0;
+                    if (sigTs > lastSeenFlowerTs) {
+                        lastSeenFlowerTs = sigTs;
+                        burstFlowersCenter();
+                        burstFlowersPartnerSide();
+                    }
+                    currentUser = latest;
+                    renderChat(currentUser.messages);
+                    renderMemories(currentUser.memories);
+                    renderTracks(currentUser.tracks);
+                    renderRetentionUI();
+                }, 2500);
+            }
+        }
+
+        // SPOTIFY PKCE & EMBED (intl-tr DESTEKLİ)
+        function randomString(len) {
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            var arr = new Uint8Array(len);
+            window.crypto.getRandomValues(arr);
+            return Array.from(arr).map(function(x) { return chars[x % chars.length]; }).join('');
+        }
+
+        async function createCodeChallenge(verifier) {
+            var data = new TextEncoder().encode(verifier);
+            var digest = await window.crypto.subtle.digest('SHA-256', data);
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function getCleanRedirectUri() {
+            return window.location.origin + window.location.pathname;
+        }
+
+        async function connectSpotifyAccount() {
+            if (!SPOTIFY_CLIENT_ID) {
+                alert('Spotify hesap bağlantısı için koddaki SPOTIFY_CLIENT_ID alanına uygulama kimliğinizi yazın. Şarkı linki ekleyip sayfa içinde doğrudan oynatabilirsiniz.');
+                return;
+            }
+            var verifier = randomString(64);
+            var challenge = await createCodeChallenge(verifier);
+            sessionStorage.setItem(SPOTIFY_VERIFIER_KEY, verifier);
+
+            var params = new URLSearchParams({
+                client_id: SPOTIFY_CLIENT_ID,
+                response_type: 'code',
+                redirect_uri: getCleanRedirectUri(),
+                scope: 'user-read-private user-read-email playlist-read-private',
+                code_challenge_method: 'S256',
+                code_challenge: challenge
+            });
+            window.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+        }
+
+        async function handleSpotifyCallbackIfPresent() {
+            var params = new URLSearchParams(window.location.search);
+            var code = params.get('code');
+            if (!code || !SPOTIFY_CLIENT_ID) return;
+
+            var verifier = sessionStorage.getItem(SPOTIFY_VERIFIER_KEY);
+            if (!verifier) return;
+
+            try {
+                var body = new URLSearchParams({
+                    client_id: SPOTIFY_CLIENT_ID,
+                    grant_type: 'authorization_code',
+                    code: code,
+                    redirect_uri: getCleanRedirectUri(),
+                    code_verifier: verifier
+                });
+                var tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString()
+                });
+                var tokenJson = await tokenRes.json();
+                if (tokenJson.access_token) {
+                    spotifyAccessToken = tokenJson.access_token;
+                    var meRes = await fetch('https://api.spotify.com/v1/me', {
+                        headers: { Authorization: 'Bearer ' + spotifyAccessToken }
+                    });
+                    var me = await meRes.json();
+                    if (currentUser && currentUid) {
+                        currentUser.spotifyConnected = {
+                            displayName: me.display_name || me.id || 'Spotify Kullanıcısı',
+                            email: me.email || ''
+                        };
+                        await updateVaultPath(currentUid, 'spotifyConnected', currentUser.spotifyConnected);
+                        updateSpotifyUI();
+                    }
+                }
+            } catch (e) {}
+
+            window.history.replaceState({}, document.title, getCleanRedirectUri());
+        }
+
+        async function importSpotifyPlaylists() {
+            if (!spotifyAccessToken || !currentUser || !currentUid) {
+                alert('Oturum yenilendiği için Spotify listelerini çekmek üzere tekrar "Spotify ile Bağlan" butonuna basın.');
+                return;
+            }
+            try {
+                var res = await fetch('https://api.spotify.com/v1/me/playlists?limit=10', {
+                    headers: { Authorization: 'Bearer ' + spotifyAccessToken }
+                });
+                var data = await res.json();
+                var items = data.items || [];
+                var existingUrls = {};
+                (currentUser.tracks || []).forEach(function(t) { existingUrls[t.url] = true; });
+
+                var added = 0;
+                items.forEach(function(pl) {
+                    var plUrl = pl.external_urls && pl.external_urls.spotify ? pl.external_urls.spotify : 'https://open.spotify.com';
+                    if (!existingUrls[plUrl]) {
+                        existingUrls[plUrl] = true;
+                        currentUser.tracks.unshift({
+                            id: Date.now() + Math.floor(Math.random() * 10000),
+                            platform: 'spotify',
+                            title: 'Liste: ' + pl.name,
+                            url: sanitizeSafeHref(plUrl)
+                        });
+                        added++;
+                    }
+                });
+
+                if (added > 0) {
+                    var ok = await updateVaultPath(currentUid, 'tracks', currentUser.tracks);
+                    if (!ok) {
+                        alert('Listeler kaydedilemedi.');
+                        return;
+                    }
+                    renderTracks(currentUser.tracks);
+                } else {
+                    alert('Listeleriniz zaten ekli.');
+                }
+            } catch (e) {
+                alert('Spotify listeleri alınamadı.');
+            }
+        }
+
+        function updateSpotifyUI() {
+            var statusEl = document.getElementById('spotifyStatusText');
+            var infoEl = document.getElementById('spotifyProfileInfo');
+            var btnImp = document.getElementById('btnLoadSpotifyPlaylists');
+            if (!currentUser) return;
+
+            if (currentUser.spotifyConnected && currentUser.spotifyConnected.displayName) {
+                statusEl.textContent = spotifyAccessToken ? 'Spotify bağlı (Oturum aktif)' : 'Spotify profili kayıtlı';
+                statusEl.style.color = '#4ade80';
+                infoEl.innerHTML = 'Bağlı Spotify Hesabı: <strong>' + sanitizeText(currentUser.spotifyConnected.displayName) + '</strong>';
+                if (spotifyAccessToken) {
+                    btnImp.classList.remove('hidden');
+                } else {
+                    btnImp.classList.add('hidden');
+                }
+            } else {
+                statusEl.textContent = 'Spotify bağlı değil';
+                statusEl.style.color = '#71717a';
+                infoEl.textContent = 'Şarkı linki ekleyip sayfa içinde Spotify oynatabilir veya YouTube Music bağlantısı paylaşabilirsiniz.';
+                btnImp.classList.add('hidden');
+            }
+        }
+
+        function getSpotifyEmbedUrl(rawUrl) {
+            var match = String(rawUrl || '').match(/open\.spotify\.com\/(?:intl-[a-zA-Z-]+\/)?(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
+            if (!match) return null;
+            return 'https://open.spotify.com/embed/' + match[1] + '/' + match[2] + '?theme=0';
+        }
+
+        async function doAddTrack() {
+            if (!currentUser || !currentUid) return;
+            var platform = document.getElementById('musicPlatform').value;
+            var title = document.getElementById('musicTitle').value.trim();
+            var url = document.getElementById('musicUrl').value.trim();
+
+            if (!title) {
+                alert('Lütfen şarkı veya sanatçı adını yazın.');
+                return;
+            }
+
+            if (!url) {
+                var encoded = encodeURIComponent(title);
+                url = (platform === 'spotify')
+                    ? 'https://open.spotify.com/search/' + encoded
+                    : 'https://music.youtube.com/search?q=' + encoded;
+            }
+
+            var safeUrl = sanitizeSafeHref(url);
+            var nextTracks = [{
+                id: Date.now(),
+                platform: platform,
+                title: title,
+                url: safeUrl
+            }].concat(currentUser.tracks || []);
+
+            var ok = await updateVaultPath(currentUid, 'tracks', nextTracks);
+            if (!ok) {
+                alert('Şarkı kaydedilemedi.');
+                return;
+            }
+
+            currentUser.tracks = nextTracks;
+            document.getElementById('musicTitle').value = '';
+            document.getElementById('musicUrl').value = '';
+            renderTracks(nextTracks);
+        }
+
+        async function removeTrack(id) {
+            if (!currentUser || !currentUid) return;
+            if (!confirm('Bu şarkıyı listeden silmek istiyor musunuz?')) return;
+            var nextTracks = (currentUser.tracks || []).filter(function(t) { return t.id !== id; });
+            var ok = await updateVaultPath(currentUid, 'tracks', nextTracks);
+            if (!ok) {
+                alert('Şarkı silinemedi.');
+                return;
+            }
+            currentUser.tracks = nextTracks;
+            renderTracks(nextTracks);
+        }
+
+        function renderTracks(tracks) {
+            var listEl = document.getElementById('musicList');
+            var list = Array.isArray(tracks) ? tracks : [];
+            var sig = list.map(function(t) { return t.id + '|' + t.platform + '|' + t.title + '|' + t.url; }).join(';;');
+            if (sig === lastRenderedTrackSig) return;
+            lastRenderedTrackSig = sig;
+
+            listEl.innerHTML = '';
+            if (list.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center; color:#71717a; font-size:13px; padding:12px;">Henüz ortak şarkı eklenmedi. Spotify veya YouTube Music bağlantısı ekleyebilirsiniz 🎧</div>';
+                return;
+            }
+
+            list.forEach(function(tr) {
+                var row = document.createElement('div');
+                row.className = 'music-item';
+                var badgeClass = (tr.platform === 'spotify') ? 'music-badge-spotify' : 'music-badge-ytm';
+                var badgeText = (tr.platform === 'spotify') ? 'Spotify' : 'YouTube Music';
+                var safeUrl = sanitizeSafeHref(tr.url);
+                var embedUrl = (tr.platform === 'spotify') ? getSpotifyEmbedUrl(safeUrl) : null;
+
+                var embedHtml = embedUrl
+                    ? '<iframe class="spotify-embed-frame" src="' + embedUrl + '" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>'
+                    : '';
+
+                row.innerHTML =
+                    '<div class="music-item-top">' +
+                        '<div style="display:flex; align-items:center; gap:10px;">' +
+                            '<span class="' + badgeClass + '">' + badgeText + '</span>' +
+                            '<span style="font-size:14px; font-weight:600;">' + sanitizeText(tr.title) + '</span>' +
+                        '</div>' +
+                        '<div style="display:flex; align-items:center; gap:8px;">' +
+                            '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" class="btn-listen">Oynat / Aç ↗</a>' +
+                            '<button type="button" class="btn-delete" onclick="removeTrack(' + tr.id + ')">Sil</button>' +
+                        '</div>' +
+                    '</div>' +
+                    embedHtml;
+                listEl.appendChild(row);
+            });
+        }
+
+        // SOHBET
+        function getNowTime() {
+            var d = new Date();
+            return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+
+        async function doSendChat() {
+            if (!currentUser || !currentUid) return;
+            var sender = document.getElementById('chatSender').value;
+            var input = document.getElementById('chatInput');
+            var text = input.value.trim();
+            if (!text) return;
+
+            var nextMessages = (currentUser.messages || []).concat([{
+                id: Date.now(),
+                sender: sender,
+                text: text,
+                time: getNowTime()
+            }]);
+
+            var ok = await updateVaultPath(currentUid, 'messages', nextMessages);
+            if (!ok) {
+                alert('Mesaj kaydedilemedi.');
+                return;
+            }
+
+            currentUser.messages = nextMessages;
+            input.value = '';
+            renderChat(nextMessages, true);
+            var rect = input.getBoundingClientRect();
+            for (var i = 0; i < 4; i++) {
+                flowers.push(createFlower(rect.left + Math.random() * rect.width, rect.top));
+            }
+        }
+
+        function renderChat(msgs, forceScroll) {
+            var box = document.getElementById('chatMessages');
+            var list = Array.isArray(msgs) ? msgs : [];
+            if (list.length === lastRenderedChatCount && !forceScroll) return;
+
+            var wasNearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 80;
+            lastRenderedChatCount = list.length;
+            box.innerHTML = '';
+
+            if (list.length === 0) {
+                box.innerHTML = '<div style="text-align:center; color:#71717a; font-size:13px; padding:16px;">Henüz mesaj yok. İlk mesajı yazarak sohbeti başlatın 💌</div>';
+                return;
+            }
+
+            list.forEach(function(m) {
+                var item = document.createElement('div');
+                var isSecond = (m.sender === currentUser.name2);
+                item.className = 'chat-msg ' + (isSecond ? 'chat-msg-p2' : 'chat-msg-p1');
+                item.innerHTML =
+                    '<div class="chat-msg-meta"><span>' + sanitizeText(m.sender) + '</span><span>' + sanitizeText(m.time) + '</span></div>' +
+                    '<div>' + sanitizeText(m.text) + '</div>';
+                box.appendChild(item);
+            });
+
+            if (forceScroll || wasNearBottom || list.length <= 2) {
+                box.scrollTop = box.scrollHeight;
+            }
+        }
+
+        // İLTİFAT & SAYAÇ
+        function getComplimentList(target, sender) {
+            return [
+                '"Dünyadaki tüm papatyalar bir araya gelse, yine de senin tek bir gülüşünün verdiği huzuru veremez ' + target + '..."',
+                '"Seninle geçen her saniye hayatımın en güzel hediyesi ' + target + '. İyi ki yollarımız kesişmiş."',
+                '"Gözlerine her baktığımda yeniden aşık oluyorum ' + target + ', kalbimin en güzel yeri hep senin."',
+                '"En karanlık günlerimi bile tek bir sözünle aydınlatıyorsun ' + target + '. Seni her şeyden çok seviyorum."',
+                '"Adın geçtiğinde bile kalbim hızlanıyor ' + target + '; ' + sender + ' olarak en büyük şansım sensin."'
+            ];
+        }
+
+        function updateCompliment(num) {
+            if (!currentUser) return;
+            if (num === 1) {
+                var list1 = getComplimentList(currentUser.name2, currentUser.name1);
+                document.getElementById('complimentText1').textContent = list1[compIndex1 % list1.length];
+                compIndex1++;
+            } else {
+                var list2 = getComplimentList(currentUser.name1, currentUser.name2);
+                document.getElementById('complimentText2').textContent = list2[compIndex2 % list2.length];
+                compIndex2++;
+            }
+        }
+
+        function startCounter(dateStr) {
+            if (timerInterval) clearInterval(timerInterval);
+            var parts = (dateStr || getLocalTodayStr()).split('-');
+            var start = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0);
+
+            function tick() {
+                var now = new Date();
+                var diff = Math.max(0, now - start);
+                document.getElementById('countDays').textContent = Math.floor(diff / (1000 * 60 * 60 * 24));
+                document.getElementById('countHours').textContent = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                document.getElementById('countMinutes').textContent = Math.floor((diff / 1000 / 60) % 60);
+                document.getElementById('countSeconds').textContent = Math.floor((diff / 1000) % 60);
+            }
+            tick();
+            timerInterval = setInterval(tick, 1000);
+        }
+
+        // FOTOĞRAF KÜÇÜLTME & ANILAR
+        function compressImageFile(file, maxWidth, quality) {
+            return new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var img = new Image();
+                    img.onload = function() {
+                        var scale = Math.min(1, maxWidth / (img.width || maxWidth));
+                        var w = Math.max(1, Math.round((img.width || maxWidth) * scale));
+                        var h = Math.max(1, Math.round((img.height || maxWidth) * scale));
+                        var c = document.createElement('canvas');
+                        c.width = w;
+                        c.height = h;
+                        var cctx = c.getContext('2d');
+                        cctx.drawImage(img, 0, 0, w, h);
+                        resolve(c.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                    img.src = ev.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function doAddMemory() {
+            if (!currentUser || !currentUid) return;
+            var author = document.getElementById('memoryAuthor').value;
+            var date = document.getElementById('memoryDate').value || getLocalTodayStr();
+            var note = document.getElementById('memoryNote').value.trim();
+            var photoInput = document.getElementById('memoryPhoto');
+
+            if (!note) {
+                alert('Lütfen anı notunuzu yazın!');
+                return;
+            }
+
+            var photoData = '';
+            if (photoInput.files && photoInput.files[0]) {
+                try {
+                    photoData = await compressImageFile(photoInput.files[0], 900, 0.72);
+                } catch (e) {
+                    alert('Fotoğraf işlenemedi.');
+                    return;
+                }
+            }
+
+            var nextMemories = [{
+                id: Date.now(),
+                author: author,
+                date: date,
+                note: note,
+                photo: photoData
+            }].concat(currentUser.memories || []);
+
+            var ok = await updateVaultPath(currentUid, 'memories', nextMemories);
+            if (!ok) {
+                alert('Anı kaydedilemedi (depolama sınırı aşılmış olabilir).');
+                return;
+            }
+
+            currentUser.memories = nextMemories;
+            document.getElementById('memoryNote').value = '';
+            photoInput.value = '';
+            renderMemories(nextMemories);
+            burstFlowersCenter();
+        }
+
+        async function removeMemory(id) {
+            if (!currentUser || !currentUid) return;
+            if (!confirm('Bu anıyı kalıcı olarak silmek istiyor musunuz?')) return;
+            var nextMemories = (currentUser.memories || []).filter(function(m) { return m.id !== id; });
+            var ok = await updateVaultPath(currentUid, 'memories', nextMemories);
+            if (!ok) {
+                alert('Anı silinemedi.');
+                return;
+            }
+            currentUser.memories = nextMemories;
+            renderMemories(nextMemories);
+        }
+
+        function renderMemories(memories) {
+            var grid = document.getElementById('memoriesGrid');
+            var badge = document.getElementById('memoryCountBadge');
+            var list = Array.isArray(memories) ? memories : [];
+            var sig = list.map(function(m) { return m.id + '|' + m.author + '|' + m.date + '|' + m.note + '|' + (m.photo ? m.photo.length : 0); }).join(';;');
+
+            badge.textContent = list.length + ' Anı';
+            if (sig === lastRenderedMemorySig) return;
+            lastRenderedMemorySig = sig;
+
+            grid.innerHTML = '';
+            if (list.length === 0) {
+                grid.innerHTML = '<div class="glass-card" style="grid-column: 1 / -1; padding: 32px; text-align: center; color: #71717a; font-size: 13px;">Henüz anı eklenmemiş. İlk anınızı yukarıdan ekleyebilirsiniz 🌸</div>';
+                return;
+            }
+
+            list.forEach(function(mem) {
+                var card = document.createElement('article');
+                card.className = 'glass-card memory-item';
+                var imgTag = mem.photo ? '<img src="' + mem.photo + '" class="memory-img" alt="Anı">' : '';
+
+                card.innerHTML = imgTag +
+                    '<div class="memory-body">' +
+                        '<div>' +
+                            '<div class="memory-meta">' +
+                                '<span class="author-tag">✍️ ' + sanitizeText(mem.author) + '</span>' +
+                                '<span>📅 ' + sanitizeText(mem.date) + '</span>' +
+                            '</div>' +
+                            '<p class="memory-text">' + sanitizeText(mem.note) + '</p>' +
+                        '</div>' +
+                        '<div class="memory-actions">' +
+                            '<button type="button" class="btn-delete" onclick="removeMemory(' + mem.id + ')">Anıyı Sil</button>' +
+                        '</div>' +
+                    '</div>';
+                grid.appendChild(card);
+            });
+        }
+
+        // ÇİÇEK SİNYALİ & ANİMASYON
+        async function doSendFlowerToBoth() {
+            if (!currentUser || !currentUid) return;
+            var senderEl = document.getElementById('chatSender');
+            var senderName = (senderEl && senderEl.value) ? senderEl.value : currentUser.name1;
+            var ts = Date.now();
+            var sig = { ts: ts, from: senderName };
+
+            lastSeenFlowerTs = ts;
+            await updateVaultPath(currentUid, 'flowerSignal', sig);
+            burstFlowersCenter();
+            burstFlowersPartnerSide();
+        }
+
+        var canvas = document.getElementById('flowerCanvas');
+        var ctx = canvas.getContext('2d');
+        var flowers = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createFlower(x, y) {
+            var palettes = [
+                { petal: '#ffffff', center: '#facc15' },
+                { petal: '#f472b6', center: '#fde047' },
+                { petal: '#c084fc', center: '#fef08a' },
+                { petal: '#fb7185', center: '#fde047' }
+            ];
+            return {
+                x: x,
+                y: y,
+                size: 0,
+                maxSize: Math.random() * 16 + 12,
+                growth: Math.random() * 0.8 + 0.6,
+                petals: Math.floor(Math.random() * 4) + 6,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.03,
+                vy: -(Math.random() * 1.2 + 0.4),
+                vx: (Math.random() - 0.5) * 1.2,
+                alpha: 1,
+                colors: palettes[Math.floor(Math.random() * palettes.length)]
+            };
+        }
+
+        function burstFlowersCenter() {
+            var cx = window.innerWidth / 2;
+            var cy = window.innerHeight / 2;
+            for (var i = 0; i < 16; i++) {
+                flowers.push(createFlower(cx + (Math.random() - 0.5) * 300, cy + (Math.random() - 0.5) * 200));
+            }
+        }
+
+        function burstFlowersPartnerSide() {
+            var rightX = window.innerWidth * 0.78;
+            var midY = window.innerHeight * 0.35;
+            for (var i = 0; i < 16; i++) {
+                flowers.push(createFlower(rightX + (Math.random() - 0.5) * 220, midY + (Math.random() - 0.5) * 220));
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            var tag = e.target.tagName;
+            if (tag !== 'INPUT' && tag !== 'BUTTON' && tag !== 'SELECT' && tag !== 'LABEL' && tag !== 'A') {
+                for (var i = 0; i < 5; i++) {
+                    flowers.push(createFlower(e.clientX + (Math.random() - 0.5) * 60, e.clientY + (Math.random() - 0.5) * 60));
+                }
+            }
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            flowers = flowers.filter(function(f) { return f.alpha > 0; });
+            flowers.forEach(function(f) {
+                if (f.size < f.maxSize) f.size += f.growth;
+                else f.alpha -= 0.012;
+                f.x += f.vx;
+                f.y += f.vy;
+                f.rotation += f.rotSpeed;
+
+                if (f.alpha > 0) {
+                    ctx.save();
+                    ctx.translate(f.x, f.y);
+                    ctx.rotate(f.rotation);
+                    ctx.globalAlpha = Math.max(0, f.alpha);
+                    ctx.fillStyle = f.colors.petal;
+                    for (var i = 0; i < f.petals; i++) {
+                        ctx.rotate((Math.PI * 2) / f.petals);
+                        ctx.beginPath();
+                        ctx.ellipse(0, -f.size * 0.65, f.size * 0.28, f.size * 0.55, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = f.colors.center;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, f.size * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
